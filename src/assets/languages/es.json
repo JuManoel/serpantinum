@@ -36,7 +36,9 @@
       "tutorial": "Tutorial",
       "update": "Actualizaciones",
       "about": "Acerca de",
-      "autostart": "Inicio automático"
+      "autostart": "Inicio automático",
+      "display_widget": "Widgets",
+      "display_general": "General"
     },
     "launcher": {
       "position": {
@@ -866,7 +868,9 @@
     "redactor": {
       "no_widgets_active": "No hay widgets activos",
       "click_to_add": "Haz clic en el icono de un widget en la barra inferior para añadirlo",
-      "done": "Listo"
+      "done": "Listo",
+      "widget_singular": "widget",
+      "widgets_plural": "widgets"
     },
     "types": {
       "clock": "Reloj",

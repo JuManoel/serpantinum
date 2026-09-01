@@ -35,7 +35,9 @@
       "wellbeing": "Benessere",
       "tutorial": "Tutorial",
       "update": "Aggiorna",
-      "about": "Informazioni"
+      "about": "Informazioni",
+      "display_widget": "Widget",
+      "display_general": "Generale"
     },
     "launcher": {
       "position": {
@@ -822,7 +824,9 @@
     "redactor": {
       "no_widgets_active": "Nessun widget attivo",
       "click_to_add": "Clicca un widget nella barra in basso per aggiungerlo",
-      "done": "Fatto"
+      "done": "Fatto",
+      "widget_singular": "widget",
+      "widgets_plural": "widgets"
     },
     "types": {
       "clock": "Orologio",

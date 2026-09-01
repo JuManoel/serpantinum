@@ -3,17 +3,18 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
-import "../"
-import "../reusables"
-import "../info"
+import "../../"
+import "../../reusables"
+import "../../info"
 
 Item {
     id: displayTabRoot
     required property var rootObj
     required property int tabIndex
+    property int subTabIndex: 0
 
     anchors.fill: parent
-    visible: rootObj.currentTab === tabIndex
+    visible: rootObj.currentTab === tabIndex && rootObj.currentSubTab === subTabIndex
     opacity: visible ? 1.0 : 0.0
     property real slideY: visible ? 0 : rootObj.s(10)
 
@@ -380,13 +381,25 @@ Item {
         anchors.leftMargin: rootObj.s(8)
         anchors.rightMargin: rootObj.s(8)
         anchors.bottomMargin: rootObj.s(4)
-        contentHeight: settingsCol.implicitHeight
+        contentHeight: settingsCol.implicitHeight + rootObj.s(16)
+        contentWidth: width
         clip: true
         boundsBehavior: Flickable.StopAtBounds
 
+        ScrollBar.vertical: ScrollBar {
+            active: parent.moving || parent.movingVertically
+            width: rootObj.s(4)
+            policy: ScrollBar.AsNeeded
+            contentItem: Rectangle {
+                implicitWidth: rootObj.s(4)
+                radius: rootObj.s(2)
+                color: ThemeBackend.surface2
+            }
+        }
+
         ColumnLayout {
             id: settingsCol
-            width: parent.width
+            width: parent.width - (parent.contentHeight > parent.height ? rootObj.s(6) : 0)
             spacing: rootObj.s(12)
 
             Repeater {
@@ -885,73 +898,6 @@ Item {
                                                 displayTabRoot.updateMonitorSetting(displayTabRoot.pendingMonScaleName, "scale", displayTabRoot.pendingMonScaleVal);
                                                 displayTabRoot.pendingMonScaleName = "";
                                             }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: Qt.alpha(ThemeBackend.surface1, 0.2)
-                            Layout.topMargin: rootObj.s(5)
-                            Layout.bottomMargin: rootObj.s(5)
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            implicitHeight: rowWidgetsLayout.implicitHeight + rootObj.s(18)
-                            color: "transparent"
-
-                            RowLayout {
-                                id: rowWidgetsLayout
-                                anchors.left: parent.left
-                                anchors.leftMargin: rootObj.s(12)
-                                anchors.right: parent.right
-                                anchors.rightMargin: rootObj.s(12)
-                                anchors.verticalCenter: parent.verticalCenter
-                                spacing: rootObj.s(16)
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: rootObj.s(2)
-
-                                    Text {
-                                        text: I18n.t("guide.display.widgets.title")
-                                        font.family: ThemeBackend.fontFamily
-                                        font.pixelSize: rootObj.s(13)
-                                        color: ThemeBackend.text
-                                    }
-
-                                    Text {
-                                        text: I18n.t("guide.display.widgets.desc")
-                                        font.family: ThemeBackend.fontFamily
-                                        font.pixelSize: rootObj.s(11)
-                                        color: ThemeBackend.subtext0
-                                    }
-                                }
-
-                                ClickButton {
-                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                                    Layout.rightMargin: rootObj.s(8)
-                                    maxWidth: rootObj.s(120)
-                                    implicitHeight: rootObj.s(32)
-                                    cornerRadius: ThemeBackend.borderRadius
-                                    buttonText: I18n.t("guide.display.widgets.open")
-                                    textFontSize: rootObj.s(12)
-                                    accentColor: ThemeBackend.mauve
-                                    textColor: ThemeBackend.crust
-                                    onClicked: {
-                                        let mon = monDelegate.monName;
-                                        let runnerTarget = Caching.serpantinumDir ? (Caching.serpantinumDir + "/quickshell/Runner.qml") : "";
-                                        let redactorTarget = Caching.widgetRedactor || (Caching.serpantinumDir ? Caching.serpantinumDir + "/quickshell/widgets/WidgetRedactor.qml" : Caching.mainQml);
-                                        let launchCmd = "{ mkdir -p '" + Caching.runDir + "' && printf '%s' '" + mon + "' > '" + Caching.runDir + "/redactor_target_monitor' && QS_WIDGET_MONITOR='" + mon + "' SERPANTINUM_TARGET_FILE='" + redactorTarget + "' quickshell -p '" + runnerTarget + "'; } >> /tmp/redactor_debug.log 2>&1";
-                                        Quickshell.execDetached(["bash", "-c", launchCmd]);
-                                        if (rootObj && typeof rootObj.closePopup === "function") {
-                                            rootObj.closePopup();
-                                        } else {
-                                            Quickshell.execDetached(["bash", Caching.serpantinumDir + "/scripts/qs_manager.sh", "close"]);
                                         }
                                     }
                                 }

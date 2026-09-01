@@ -36,7 +36,9 @@
       "tutorial": "Обучение",
       "update": "Обновления",
       "about": "О программе",
-      "autostart": "Автозапуск"
+      "autostart": "Автозапуск",
+      "display_widget": "Виджеты",
+      "display_general": "Общие"
     },
     "launcher": {
       "position": {
@@ -866,7 +868,9 @@
     "redactor": {
       "no_widgets_active": "Нет активных виджетов",
       "click_to_add": "Нажмите на иконку виджета на нижней панели, чтобы добавить его",
-      "done": "Готово"
+      "done": "Готово",
+      "widget_singular": "виджет",
+      "widgets_plural": "виджетов"
     },
     "types": {
       "clock": "Часы",

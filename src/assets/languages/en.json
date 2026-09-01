@@ -35,7 +35,9 @@
       "wellbeing": "Wellbeing",
       "tutorial": "Tutorial",
       "update": "Update",
-      "about": "About"
+      "about": "About",
+      "display_widgets": "Widgets",
+      "display_general": "General"
     },
     "launcher": {
       "position": {
@@ -822,7 +824,9 @@
     "redactor": {
       "no_widgets_active": "No widgets active",
       "click_to_add": "Click a widget icon in the bottom toolbar to add it",
-      "done": "Done"
+      "done": "Done",
+      "widget_singular": "widget",
+      "widgets_plural": "widgets"
     },
     "types": {
       "clock": "Clock",
