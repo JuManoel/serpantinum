@@ -12,7 +12,7 @@ Item {
 
     property int requestedLayoutTemplate: 1
     property bool isActiveTab: typeof isCurrentTarget !== "undefined" ? isCurrentTarget : true
-    property bool keepAlive: inNoteView && isEditing && editorArea.activeFocus
+    property bool keepAlive: inNoteView && isEditing
     property bool isEditing: false
     property bool inNoteView: false
     property string iconFont: "Font Awesome 6 Free Solid"

@@ -95,7 +95,7 @@ Variants {
                 id: focusTracker
                 focus: true
                 onActiveFocusChanged: {
-                    if (!activeFocus && !floatingWidget.isPinned) {
+                    if (!activeFocus && !floatingWidget.isPinned && !floatingWidget.moduleKeepAlive()) {
                         floatingWidget.isExpanded = false;
                         hideTimer.restart();
                     }
