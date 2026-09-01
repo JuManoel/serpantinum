@@ -1394,14 +1394,11 @@ PanelWindow {
                                     onClicked: widgetProxy.resetWidgetSize()
                                 }
 
-                                IconButton {
+                                DeleteButton {
                                     id: closeBtn
                                     size: s(34)
                                     cornerRadius: ThemeBackend.borderRadius
-                                    buttonIcon: "×"
                                     iconFontSize: s(18)
-                                    accentColor: ThemeBackend.red
-                                    textColor: ThemeBackend.crust
 
                                     onClicked: {
                                         let rmId = String(widgetProxy.wId);

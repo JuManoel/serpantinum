@@ -337,13 +337,10 @@ Item {
                                             }
                                         }
 
-                                        IconButton {
+                                        DeleteButton {
                                             size: rootObj.s(28)
                                             cornerRadius: Math.min(ThemeBackend.borderRadius, rootObj.s(8))
-                                            buttonIcon: "󰆴"
                                             iconFontSize: rootObj.s(14)
-                                            accentColor: ThemeBackend.surface1
-                                            textColor: ThemeBackend.text
                                             Layout.alignment: Qt.AlignVCenter
                                             onClicked: {
                                                 let wId = widgetItemCard.modelData.wId || widgetItemCard.modelData.id;

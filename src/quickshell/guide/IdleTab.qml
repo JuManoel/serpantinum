@@ -489,16 +489,12 @@ Item {
                         }
                     }
 
-                    IconButton {
+                    DeleteButton {
                         visible: actionCard.isCustomAct
                         Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: rootObj.s(28)
-                        implicitHeight: rootObj.s(28)
+                        size: rootObj.s(28)
                         cornerRadius: rootObj.s(8)
-                        buttonIcon: "󰅖"
                         iconFontSize: rootObj.s(14)
-                        accentColor: Qt.alpha(ThemeBackend.red, 0.15)
-                        textColor: isHoveredOrHighlighted ? Qt.lighter(ThemeBackend.red, 1.2) : ThemeBackend.red
                         onClicked: {
                             idleTabRoot.deleteCustomAction(actionCard.actId);
                         }
