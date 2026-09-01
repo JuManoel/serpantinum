@@ -43,10 +43,17 @@ Rectangle {
     property bool isPlaying: targetPlayer ? (targetPlayer.playbackState === MprisPlaybackState.Playing || targetPlayer.isPlaying) : false
     readonly property bool isRightBar: barWindow ? (barWindow.barPosition === "right") : false
 
-    property string rawArtUrl: (targetPlayer && targetPlayer === MprisController.activePlayer && MprisController.artUrl) ? MprisController.artUrl : (targetPlayer && targetPlayer.trackArtUrl ? targetPlayer.trackArtUrl : "")
+    property string rawArtUrl: {
+        if (!targetPlayer) return "";
+        if (targetPlayer === MprisController.activePlayer) {
+            return MprisController.artUrl;
+        }
+        return targetPlayer.trackArtUrl || "";
+    }
+
     property string activeArtUrl: {
         if (!rawArtUrl) return "";
-        if (rawArtUrl.indexOf("://") !== -1) return rawArtUrl;
+        if (rawArtUrl.startsWith("file://") || rawArtUrl.startsWith("http")) return rawArtUrl;
         return "file://" + rawArtUrl;
     }
 
@@ -96,7 +103,6 @@ Rectangle {
         border.width: 0
         border.color: "transparent"
         clip: true
-
     }
 
     MouseArea {
@@ -152,9 +158,9 @@ Rectangle {
 
             Image {
                 anchors.fill: parent
-                source: sideMediaRoot.activeArtUrl
+                source: isMediaActive ? sideMediaRoot.activeArtUrl : ""
                 fillMode: Image.PreserveAspectCrop
-                visible: isMediaActive && sideMediaRoot.activeArtUrl !== ""
+                visible: isMediaActive && sideMediaRoot.activeArtUrl !== "" && status === Image.Ready
             }
 
             Rectangle {
