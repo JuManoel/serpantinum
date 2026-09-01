@@ -19,6 +19,18 @@ get_installed_version() {
     if [ -f "$version_file" ]; then
         ver=$(awk -F= '/^SERPANTINUM_VERSION=/{gsub(/["'\'' ]/, "", $2); print $2}' "$version_file")
     fi
+    if [ -z "$ver" ] && [ -n "$SERPANTINUM_VERSION" ]; then
+        ver="$SERPANTINUM_VERSION"
+    fi
+    if [ -z "$ver" ]; then
+        if [ -n "$SERPANTINUM_DIR" ] && [ -f "$SERPANTINUM_DIR/version.txt" ]; then
+            ver=$(cat "$SERPANTINUM_DIR/version.txt" 2>/dev/null | xargs)
+        elif [ -f "$(dirname "$BIN_DIR")/version.txt" ]; then
+            ver=$(cat "$(dirname "$BIN_DIR")/version.txt" 2>/dev/null | xargs)
+        elif [ -n "$SERPANTINUM_DIR" ] && [ -f "$(dirname "$SERPANTINUM_DIR")/version.txt" ]; then
+            ver=$(cat "$(dirname "$SERPANTINUM_DIR")/version.txt" 2>/dev/null | xargs)
+        fi
+    fi
     if [ -z "$ver" ]; then
         ver="2.0.0"
     fi
