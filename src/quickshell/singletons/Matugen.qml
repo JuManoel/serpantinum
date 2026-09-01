@@ -24,6 +24,18 @@ Item {
     property string configPathStatic: matugenBaseDir + "/config-static.toml"
 
     property var _pendingRequest: null
+    property string _currentReqType: ""
+    property string _currentImagePath: ""
+    property string _currentMode: ""
+    property string _currentSchemeType: ""
+    property string _currentStaticJson: ""
+
+    property string _lastGeneratedReqType: ""
+    property string _lastGeneratedImagePath: ""
+    property string _lastGeneratedMode: ""
+    property string _lastGeneratedSchemeType: ""
+    property string _lastGeneratedStaticJson: ""
+    property bool _hasGeneratedSuccessfully: false
 
     signal generationStarted()
     signal generationFinished(bool success)
@@ -144,21 +156,49 @@ Item {
             return false;
         }
 
-        if (root.isRunning) {
-            root._pendingRequest = { type: "image", imagePath: imagePath, mode: mode, schemeType: schemeType };
-            return false;
-        }
-        root._startImageGenerate(imagePath, mode, schemeType);
-        return true;
-    }
-
-    function _startImageGenerate(imagePath, mode, schemeType) {
         let cleanPath = imagePath.startsWith("file://") ? imagePath.substring(7) : imagePath;
-        root.lastWallpaper = cleanPath;
-
         let themeConfig = Config.getSetting("theme", {});
         let selectedMode = mode || themeConfig.mode || "dark";
         let selectedType = schemeType || themeConfig.schemeType || "scheme-tonal-spot";
+
+        if (root._hasGeneratedSuccessfully
+            && root._lastGeneratedReqType === "image"
+            && root._lastGeneratedImagePath === cleanPath
+            && root._lastGeneratedMode === selectedMode
+            && root._lastGeneratedSchemeType === selectedType
+            && !root.isRunning) {
+            return true;
+        }
+
+        if (root.isRunning) {
+            if (root._currentReqType === "image"
+                && root._currentImagePath === cleanPath
+                && root._currentMode === selectedMode
+                && root._currentSchemeType === selectedType) {
+                return true;
+            }
+            if (root._pendingRequest
+                && root._pendingRequest.type === "image"
+                && root._pendingRequest.imagePath === cleanPath
+                && root._pendingRequest.mode === selectedMode
+                && root._pendingRequest.schemeType === selectedType) {
+                return true;
+            }
+            root._pendingRequest = { type: "image", imagePath: cleanPath, mode: selectedMode, schemeType: selectedType };
+            return false;
+        }
+
+        root._startImageGenerate(cleanPath, selectedMode, selectedType);
+        return true;
+    }
+
+    function _startImageGenerate(cleanPath, selectedMode, selectedType) {
+        root.lastWallpaper = cleanPath;
+        root._currentReqType = "image";
+        root._currentImagePath = cleanPath;
+        root._currentMode = selectedMode;
+        root._currentSchemeType = selectedType;
+        root._currentStaticJson = "";
 
         matugenProcess.reqType = "image";
         matugenProcess.command = [
@@ -177,18 +217,47 @@ Item {
             return false;
         }
 
+        let themeConfig = Config.getSetting("theme", {});
+        let selectedMode = mode || themeConfig.mode || "dark";
+        let rawJson = JSON.stringify(colorsObj);
+
+        if (root._hasGeneratedSuccessfully
+            && root._lastGeneratedReqType === "static"
+            && root._lastGeneratedStaticJson === rawJson
+            && root._lastGeneratedMode === selectedMode
+            && !root.isRunning) {
+            return true;
+        }
+
         if (root.isRunning) {
-            root._pendingRequest = { type: "static", colorsObj: colorsObj, mode: mode };
+            if (root._currentReqType === "static"
+                && root._currentStaticJson === rawJson
+                && root._currentMode === selectedMode) {
+                return true;
+            }
+            if (root._pendingRequest
+                && root._pendingRequest.type === "static"
+                && root._pendingRequest.rawJson === rawJson
+                && root._pendingRequest.mode === selectedMode) {
+                return true;
+            }
+            root._pendingRequest = { type: "static", colorsObj: colorsObj, rawJson: rawJson, mode: selectedMode };
             return false;
         }
-        root._startStaticGenerate(colorsObj, mode);
+
+        root._startStaticGenerate(colorsObj, rawJson, selectedMode);
         return true;
     }
 
-    function _startStaticGenerate(colorsObj, mode) {
+    function _startStaticGenerate(colorsObj, rawJson, selectedMode) {
+        root._currentReqType = "static";
+        root._currentImagePath = "";
+        root._currentMode = selectedMode;
+        root._currentSchemeType = "";
+        root._currentStaticJson = rawJson;
+
         let md3Obj = root.toMd3(colorsObj);
         let md3Json = JSON.stringify(md3Obj);
-        let rawJson = JSON.stringify(colorsObj);
 
         let script =
             "STATE_DIR=\"$HOME/.local/state/serpantinum\"; " +
@@ -214,6 +283,13 @@ Item {
             let success = (exitCode === 0);
 
             if (success) {
+                root._hasGeneratedSuccessfully = true;
+                root._lastGeneratedReqType = root._currentReqType;
+                root._lastGeneratedImagePath = root._currentImagePath;
+                root._lastGeneratedMode = root._currentMode;
+                root._lastGeneratedSchemeType = root._currentSchemeType;
+                root._lastGeneratedStaticJson = root._currentStaticJson;
+
                 if (matugenProcess.reqType === "image") {
                     let stateDir = (typeof Caching !== "undefined" && Caching.stateDir) ? Caching.stateDir : (Quickshell.env("HOME") + "/.local/state/serpantinum");
                     Quickshell.execDetached(["bash", "-c", "mkdir -p \"" + stateDir + "\" && cp -f \"" + stateDir + "/qs_colors.json\" \"" + stateDir + "/qs_matugen_colors.json\" 2>/dev/null || true"]);
@@ -221,15 +297,40 @@ Item {
                 Quickshell.execDetached(["bash", "-c", "killall -USR1 .kitty-wrapped 2>/dev/null || pkill -SIGUSR1 kitty 2>/dev/null || true"]);
             }
 
+            root._currentReqType = "";
+            root._currentImagePath = "";
+            root._currentMode = "";
+            root._currentSchemeType = "";
+            root._currentStaticJson = "";
+
             root.generationFinished(success);
 
             if (root._pendingRequest) {
                 let req = root._pendingRequest;
                 root._pendingRequest = null;
-                if (req.type === "image") {
-                    root._startImageGenerate(req.imagePath, req.mode, req.schemeType);
-                } else {
-                    root._startStaticGenerate(req.colorsObj, req.mode);
+
+                let isRedundant = false;
+                if (success) {
+                    if (req.type === "image"
+                        && root._lastGeneratedReqType === "image"
+                        && root._lastGeneratedImagePath === req.imagePath
+                        && root._lastGeneratedMode === req.mode
+                        && root._lastGeneratedSchemeType === req.schemeType) {
+                        isRedundant = true;
+                    } else if (req.type === "static"
+                        && root._lastGeneratedReqType === "static"
+                        && root._lastGeneratedStaticJson === req.rawJson
+                        && root._lastGeneratedMode === req.mode) {
+                        isRedundant = true;
+                    }
+                }
+
+                if (!isRedundant) {
+                    if (req.type === "image") {
+                        root._startImageGenerate(req.imagePath, req.mode, req.schemeType);
+                    } else {
+                        root._startStaticGenerate(req.colorsObj, req.rawJson, req.mode);
+                    }
                 }
             }
         }

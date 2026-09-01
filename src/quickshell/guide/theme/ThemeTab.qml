@@ -500,19 +500,22 @@ Item {
     }
 
     function applyPreset(modelData) {
+        if (!modelData) return;
+
+        let isMatugen = modelData.isMatugen === true;
         themeTabRoot.currentPreset = modelData.name;
-        themeTabRoot.useMatugen = modelData.isMatugen === true;
+        themeTabRoot.useMatugen = isMatugen;
 
         let current = Config.getSetting("theme", themeTabRoot.defaultThemeSettings);
         current.activePreset = modelData.name;
-        current.matugen = modelData.isMatugen === true;
-        if (!modelData.isMatugen) {
+        current.matugen = isMatugen;
+        if (!isMatugen) {
             current.colors = modelData.colors;
         }
 
         Config.setSetting("theme", current);
 
-        if (modelData.isMatugen) {
+        if (isMatugen) {
             if (typeof ThemeBackend !== "undefined") {
                 let applied = (typeof ThemeBackend.applyMatugenColors === "function") && ThemeBackend.applyMatugenColors();
                 if (!applied && themeTabRoot.matugenColors && Object.keys(themeTabRoot.matugenColors).length > 0) {
@@ -678,42 +681,6 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: 150 } }
             }
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: rootObj.s(12)
-                anchors.rightMargin: rootObj.s(12)
-                spacing: rootObj.s(6)
-
-                Text {
-                    text: modelData.name
-                    font.family: ThemeBackend.fontFamily
-                    font.pixelSize: rootObj.s(11)
-                    font.weight: delegateContainer.isSelected ? Font.Bold : Font.Medium
-                    color: delegateContainer.textC
-                    Layout.alignment: Qt.AlignVCenter
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Row {
-                    Layout.alignment: Qt.AlignVCenter
-                    spacing: rootObj.s(4)
-                    opacity: (delegateContainer.isHovered && modelData.isCustom === true) ? 0.0 : 1.0
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
-
-                    Repeater {
-                        model: themeTabRoot.getCardDots(delegateContainer.modelData)
-                        Rectangle {
-                            width: rootObj.s(10)
-                            height: rootObj.s(10)
-                            radius: rootObj.s(5)
-                            color: modelData
-                        }
-                    }
-                }
-            }
-
             Rectangle {
                 anchors.fill: parent
                 radius: ThemeBackend.borderRadius
@@ -753,45 +720,54 @@ Item {
                 }
             }
 
-            Loader {
-                id: deleteBtnLoader
-                z: 2
-                anchors.right: parent.right
-                anchors.rightMargin: rootObj.s(6)
-                anchors.verticalCenter: parent.verticalCenter
-                active: modelData.isCustom === true
-                sourceComponent: Rectangle {
-                    width: deleteText.implicitWidth + rootObj.s(14)
-                    height: rootObj.s(26)
-                    radius: ThemeBackend.borderRadius
-                    color: deleteMa.containsMouse ? Qt.lighter(ThemeBackend.red, 1.15) : ThemeBackend.red
-                    opacity: delegateContainer.isHovered ? 1.0 : 0.0
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: rootObj.s(10)
+                anchors.rightMargin: rootObj.s(modelData.isCustom === true ? 6 : 10)
+                spacing: rootObj.s(4)
 
-                    property real slideX: delegateContainer.isHovered ? 0 : rootObj.s(16)
-                    transform: Translate { x: slideX }
-
-                    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutQuint } }
-                    Behavior on slideX { NumberAnimation { duration: 220; easing.type: Easing.OutQuart } }
+                Text {
+                    text: modelData.name
+                    font.family: ThemeBackend.fontFamily
+                    font.pixelSize: rootObj.s(11)
+                    font.weight: delegateContainer.isSelected ? Font.Bold : Font.Medium
+                    color: delegateContainer.textC
+                    Layout.alignment: Qt.AlignVCenter
+                    elide: Text.ElideRight
+                    Layout.maximumWidth: rootObj.s(modelData.isCustom === true ? 56 : 74)
                     Behavior on color { ColorAnimation { duration: 150 } }
+                }
 
-                    Text {
-                        id: deleteText
-                        anchors.centerIn: parent
-                        text: "Delete"
-                        font.family: ThemeBackend.fontFamily
-                        font.pixelSize: rootObj.s(11)
-                        font.weight: Font.Medium
-                        color: ThemeBackend.crust
-                    }
+                Item { Layout.fillWidth: true }
 
-                    MouseArea {
-                        id: deleteMa
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            themeTabRoot.deleteCustomTheme(delegateContainer.modelData.name);
+                Row {
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: rootObj.s(4)
+
+                    Repeater {
+                        model: themeTabRoot.getCardDots(delegateContainer.modelData)
+                        Rectangle {
+                            width: rootObj.s(8)
+                            height: rootObj.s(8)
+                            radius: rootObj.s(4)
+                            color: modelData
                         }
+                    }
+                }
+
+                Item {
+                    visible: modelData.isCustom === true
+                    Layout.fillWidth: true
+                }
+
+                DeleteButton {
+                    visible: modelData.isCustom === true
+                    size: rootObj.s(24)
+                    cornerRadius: Math.min(ThemeBackend.borderRadius, rootObj.s(6))
+                    iconFontSize: rootObj.s(12)
+                    Layout.alignment: Qt.AlignVCenter
+                    onClicked: {
+                        themeTabRoot.deleteCustomTheme(delegateContainer.modelData.name);
                     }
                 }
             }
