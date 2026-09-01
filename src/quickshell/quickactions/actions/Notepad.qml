@@ -44,6 +44,7 @@ Item {
     property color cText: ThemeBackend.text
     property color cSubtext0: ThemeBackend.subtext0
     property color cMauve: ThemeBackend.mauve
+    property color cCrust: ThemeBackend.crust
 
     function alpha(color, a) { return Qt.rgba(color.r, color.g, color.b, a); }
 
@@ -372,22 +373,18 @@ Item {
                 }
             }
 
-            Rectangle {
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: ThemeBackend.borderRadius
-                color: root.cSurface0
-                border.width: 1
-                border.color: root.cSurface1
                 clip: true
 
                 ListView {
                     id: notesList
                     anchors.fill: parent
-                    anchors.margins: root.s(6)
-                    spacing: root.s(6)
+                    spacing: root.s(4)
                     model: notesModel
                     clip: true
+                    boundsBehavior: Flickable.StopAtBounds
 
                     Text {
                         anchors.centerIn: parent
@@ -399,72 +396,109 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
 
-                    delegate: Rectangle {
+                    delegate: Item {
+                        id: noteDelegateWrapper
                         width: notesList.width
-                        height: root.s(58)
-                        radius: root.s(8)
-                        color: model.id === root.activeId
-                            ? root.alpha(root.cMauve, 0.22)
-                            : (rowMa.containsMouse ? root.alpha(root.cSurface1, 0.85) : root.alpha(root.cBase, 0.5))
-                        border.width: model.id === root.activeId ? 1 : 0
-                        border.color: root.cMauve
+                        height: noteDelegateCard.height
 
-                        ColumnLayout {
+                        property bool isSelected: model.id === root.activeId
+
+                        scale: noteCardMa.pressed ? 0.98 : 1.0
+                        Behavior on scale {
+                            NumberAnimation { duration: 250; easing.type: Easing.OutQuint }
+                        }
+
+                        Rectangle {
+                            id: noteDelegateCard
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            anchors.leftMargin: root.s(10)
-                            anchors.rightMargin: root.s(10)
-                            anchors.topMargin: root.s(10)
-                            anchors.bottomMargin: root.s(14)
-                            spacing: root.s(3)
+                            height: root.s(52)
+                            radius: Math.min(ThemeBackend.borderRadius, root.s(12))
+                            color: {
+                                if (noteDelegateWrapper.isSelected) return root.cMauve;
+                                return noteCardMa.containsMouse ? Qt.lighter(root.cSurface1, 1.04) : root.cSurface1;
+                            }
+                            clip: true
 
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.noteTitle({ content: model.content, title: model.title })
-                                font.family: ThemeBackend.fontFamily
-                                font.bold: true
-                                font.pixelSize: root.s(11)
-                                color: root.cText
-                                elide: Text.ElideRight
+                            Behavior on color {
+                                ColorAnimation { duration: 180; easing.type: Easing.OutCubic }
                             }
 
-                            Text {
-                                Layout.fillWidth: true
-                                text: {
-                                    if (!model.content || model.content.trim() === "") return I18n.t("quickactions.notepad.tap_to_write");
-                                    let preview = root.stripMarkdown(model.content.replace(/\n/g, " ").trim());
-                                    return preview.length > 60 ? preview.substring(0, 60) + "…" : preview;
+                            ColumnLayout {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                anchors.leftMargin: root.s(12)
+                                anchors.rightMargin: root.s(12)
+                                anchors.topMargin: root.s(8)
+                                anchors.bottomMargin: root.s(8)
+                                spacing: root.s(2)
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.noteTitle({ content: model.content, title: model.title })
+                                    font.family: ThemeBackend.fontFamily
+                                    font.bold: noteDelegateWrapper.isSelected
+                                    font.pixelSize: root.s(12)
+                                    color: noteDelegateWrapper.isSelected ? root.cCrust : root.cText
+                                    elide: Text.ElideRight
+
+                                    Behavior on color {
+                                        ColorAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                    }
                                 }
-                                font.family: ThemeBackend.fontFamily
-                                font.pixelSize: root.s(9)
-                                color: root.cSubtext0
-                                elide: Text.ElideRight
-                            }
 
-                            Text {
-                                Layout.fillWidth: true
-                                visible: model.updatedAt > 0
-                                text: {
-                                    let d = new Date(model.updatedAt);
-                                    return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: {
+                                        if (!model.content || model.content.trim() === "") return I18n.t("quickactions.notepad.tap_to_write");
+                                        let preview = root.stripMarkdown(model.content.replace(/\n/g, " ").trim());
+                                        return preview.length > 60 ? preview.substring(0, 60) + "…" : preview;
+                                    }
+                                    font.family: ThemeBackend.fontFamily
+                                    font.pixelSize: root.s(11)
+                                    color: noteDelegateWrapper.isSelected
+                                        ? root.alpha(root.cCrust, 0.85)
+                                        : root.cSubtext0
+                                    elide: Text.ElideRight
+                                    maximumLineCount: 1
+
+                                    Behavior on color {
+                                        ColorAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                    }
                                 }
-                                font.family: ThemeBackend.fontFamily
-                                font.pixelSize: root.s(8)
-                                color: root.alpha(root.cSubtext0, 0.75)
-                                elide: Text.ElideRight
-                            }
-                        }
 
-                        MouseArea {
-                            id: rowMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.activeId = model.id;
-                                root.selectNote(model.id);
+                                Text {
+                                    Layout.fillWidth: true
+                                    visible: model.updatedAt > 0
+                                    text: {
+                                        let d = new Date(model.updatedAt);
+                                        return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                                    }
+                                    font.family: ThemeBackend.fontFamily
+                                    font.pixelSize: root.s(8)
+                                    color: noteDelegateWrapper.isSelected
+                                        ? root.alpha(root.cCrust, 0.65)
+                                        : root.alpha(root.cSubtext0, 0.75)
+                                    elide: Text.ElideRight
+
+                                    Behavior on color {
+                                        ColorAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                id: noteCardMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.activeId = model.id;
+                                    root.selectNote(model.id);
+                                }
                             }
                         }
                     }
