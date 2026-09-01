@@ -169,7 +169,22 @@ PanelWindow {
     property real outerCornerRadius: cornerRadius
 
     property real baseLauncherWidth: s(customWidth)
-    property real baseLauncherHeight: s(70) + (customItemCount * s(48))
+
+    property real targetLauncherHeight: {
+        let count = Math.min(appModel.count, customItemCount);
+        if (count <= 0) {
+            return s(64);
+        }
+        return s(70) + (count * s(48));
+    }
+
+    property real animatedLauncherHeight: targetLauncherHeight
+    Behavior on animatedLauncherHeight {
+        NumberAnimation {
+            duration: 260
+            easing.type: Easing.OutCubic
+        }
+    }
 
     visible: isVisible || container.animProgress > 0.001
 
@@ -650,9 +665,8 @@ PanelWindow {
         property real animProgress: launcherWindow.isVisible ? 1.0 : 0.0
         Behavior on animProgress {
             NumberAnimation {
-                duration: launcherWindow.isVisible ? 360 : 220
-                easing.type: launcherWindow.isVisible ? Easing.OutBack : Easing.OutCubic
-                easing.overshoot: 1.08
+                duration: launcherWindow.isVisible ? 300 : 200
+                easing.type: Easing.OutCubic
             }
         }
 
@@ -666,7 +680,7 @@ PanelWindow {
                 let offset = launcherWindow.barMatchesLauncher ? launcherWindow.barHeight : 0;
                 return (launcherWindow.width - offset) - width;
             }
-            return Math.floor((launcherWindow.width - launcherWindow.baseLauncherWidth) / 2);
+            return Math.floor((launcherWindow.width - width) / 2);
         }
         y: {
             if (launcherWindow.attachEdge === "top") {
@@ -676,14 +690,14 @@ PanelWindow {
                 let offset = launcherWindow.barMatchesLauncher ? launcherWindow.barHeight : 0;
                 return (launcherWindow.height - offset) - height;
             }
-            return Math.floor((launcherWindow.height - launcherWindow.baseLauncherHeight) / 2);
+            return Math.floor((launcherWindow.height - height) / 2);
         }
         width: launcherWindow.isSideAttached
                ? (launcherWindow.baseLauncherWidth * animProgress)
                : launcherWindow.baseLauncherWidth
         height: !launcherWindow.isSideAttached
-                ? (launcherWindow.baseLauncherHeight * animProgress)
-                : launcherWindow.baseLauncherHeight
+                ? (launcherWindow.animatedLauncherHeight * animProgress)
+                : launcherWindow.animatedLauncherHeight
 
         opacity: (launcherWindow.isVisible || animProgress > 0.001) ? 1.0 : 0.0
 
@@ -960,16 +974,19 @@ PanelWindow {
                 color: ThemeBackend.base
             }
 
-            ColumnLayout {
+            Item {
+                id: contentContainer
                 anchors.fill: parent
                 anchors.margins: launcherWindow.s(14)
-                spacing: launcherWindow.s(10)
 
                 Input {
                     id: searchInput
                     focus: true
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: launcherWindow.s(36)
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: launcherWindow.attachEdge === "bottom" ? undefined : parent.top
+                    anchors.bottom: launcherWindow.attachEdge === "bottom" ? parent.bottom : undefined
+                    height: launcherWindow.s(36)
 
                     baseColor: ThemeBackend.surface0
                     accentColor: ThemeBackend.mauve
@@ -1015,8 +1032,14 @@ PanelWindow {
                 }
 
                 Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    id: listContainer
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: launcherWindow.attachEdge === "bottom" ? parent.top : searchInput.bottom
+                    anchors.bottom: launcherWindow.attachEdge === "bottom" ? searchInput.top : parent.bottom
+                    anchors.topMargin: launcherWindow.attachEdge === "bottom" ? 0 : launcherWindow.s(10)
+                    anchors.bottomMargin: launcherWindow.attachEdge === "bottom" ? launcherWindow.s(10) : 0
+                    clip: true
 
                     ListView {
                         id: appList
