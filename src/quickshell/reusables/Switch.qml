@@ -19,6 +19,7 @@ Item {
     property int cornerRadius: 8
     property int smallRadius: 2
     property int fontPixelSize: 11
+    property int minFontPixelSize: 7
     property bool enabled: true
     property string switchSound: "reusables/switch/sfx.wav"
 
@@ -115,11 +116,17 @@ Item {
                     }
 
                     Text {
-                        anchors.centerIn: parent
+                        anchors.fill: parent
+                        anchors.leftMargin: 4
+                        anchors.rightMargin: 4
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                         text: optionItem.modelData
                         font.family: "JetBrains Mono"
                         font.weight: Font.Normal
                         font.pixelSize: root.fontPixelSize
+                        fontSizeMode: Text.Fit
+                        minimumPixelSize: root.minFontPixelSize
                         color: root.currentIndex === optionItem.index ? root.activeTextColor : root.textColor
                         Behavior on color { ColorAnimation { duration: 200 } }
                     }

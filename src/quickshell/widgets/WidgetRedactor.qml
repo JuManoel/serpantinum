@@ -1688,7 +1688,7 @@ PanelWindow {
 
                 Item {
                     Layout.fillWidth: true
-                    Layout.minimumWidth: s(64)
+                    Layout.minimumWidth: s(32)
                 }
 
                 RowLayout {

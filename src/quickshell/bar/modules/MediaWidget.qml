@@ -121,9 +121,9 @@ Rectangle {
 
                         Image {
                             anchors.fill: parent
-                            source: (isMediaActive && MprisController.artUrl) ? "file://" + MprisController.artUrl : ""
+                            source: (isMediaActive && MprisController.artUrl) ? (MprisController.artUrl.startsWith("file://") || MprisController.artUrl.startsWith("http") ? MprisController.artUrl : "file://" + MprisController.artUrl) : ""
                             fillMode: Image.PreserveAspectCrop
-                            visible: isMediaActive && MprisController.artUrl !== ""
+                            visible: isMediaActive && MprisController.artUrl !== "" && status === Image.Ready
                         }
 
                         Rectangle {

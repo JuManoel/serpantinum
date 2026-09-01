@@ -548,6 +548,7 @@ PanelWindow {
             focusRetryTimer.restart();
             focusFinalTimer.restart();
         } else {
+            clipboardWindow.expandedClipId = "";
             filterDebounceTimer.stop();
             focusTimer.stop();
             focusRetryTimer.stop();
@@ -1171,6 +1172,13 @@ PanelWindow {
                                 readonly property bool isImage: model.type === "image"
                                 readonly property bool canExpand: {
                                     if (isImage) return true;
+                                    let c = (model && model.content) ? model.content : "";
+                                    if (c.indexOf("\n") !== -1) return true;
+                                    if (c.length > 45) return true;
+                                    if (clipSummaryText.truncated) return true;
+                                    if (clipSummaryText.lineCount >= 2) return true;
+                                    if (clipSummaryText.paintedHeight > clipSummaryContainer.height - 2) return true;
+                                    if (clipSummaryText.implicitHeight > clipSummaryContainer.height - 2) return true;
                                     if (textMeasure.lineCount > 2) return true;
                                     if (textMeasure.paintedHeight > clipboardWindow.s(32) + 2) return true;
                                     return false;

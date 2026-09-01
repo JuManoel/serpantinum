@@ -42,23 +42,13 @@ Singleton {
     property string textColor: "#cdd6f4"
     property string deviceIcon: "󰓃"
     property string deviceName: "Speaker"
-    property int artRetryCount: 0
-    property string lastFetchedUrl: ""
-
-    property string currentTrackHash: ""
-    property string lastSuccessfulHash: ""
-    property bool artFetchStalled: false
     property bool fetchPending: false
 
     onActivePlayerChanged: {
         if (root.activePlayer) {
             root.livePosition = root.activePlayer.position;
-            root.artRetryCount = 0;
-            root.lastFetchedUrl = "";
-            root.currentTrackHash = "";
-            root.artFetchStalled = false;
-            fallbackArtTimer.restart();
         }
+        root.queueFetch();
     }
 
     Timer {
@@ -74,45 +64,36 @@ Singleton {
     }
 
     Timer {
-        id: fallbackArtTimer
-        interval: 150
+        id: fetchDebounceTimer
+        interval: 60
         repeat: false
-        onTriggered: {
-            root.artRetryCount = 0;
-            root.artFetchStalled = false;
-            root.fetchArt();
-        }
+        onTriggered: root.fetchArt()
+    }
+
+    function queueFetch() {
+        fetchDebounceTimer.restart();
     }
 
     Connections {
         target: root.activePlayer
-        function onPositionChanged() { root.livePosition = root.activePlayer.position; }
+        function onPositionChanged() {
+            if (root.activePlayer) root.livePosition = root.activePlayer.position;
+        }
         function onPostTrackChanged() {
-            root.livePosition = root.activePlayer.position;
-            root.artRetryCount = 0;
-            root.lastFetchedUrl = "";
-            root.currentTrackHash = "";
-            root.artFetchStalled = false;
-            fallbackArtTimer.restart();
+            if (root.activePlayer) root.livePosition = root.activePlayer.position;
+            root.queueFetch();
         }
         function onTrackArtUrlChanged() {
-            if (root.activePlayer && root.currentArtUrl !== root.lastFetchedUrl) {
-                fallbackArtTimer.stop();
-                root.artRetryCount = 0;
-                root.artFetchStalled = false;
-                root.fetchArt();
-            }
+            root.queueFetch();
         }
         function onTrackTitleChanged() {
-            fallbackArtTimer.restart();
+            root.queueFetch();
         }
         function onMetadataChanged() {
-            if (root.activePlayer && root.currentArtUrl !== root.lastFetchedUrl) {
-                fallbackArtTimer.stop();
-                root.artRetryCount = 0;
-                root.artFetchStalled = false;
-                root.fetchArt();
-            }
+            root.queueFetch();
+        }
+        function onPlaybackStateChanged() {
+            root.queueFetch();
         }
     }
 
@@ -139,23 +120,17 @@ Singleton {
                         let d = JSON.parse(txt);
                         root.deviceIcon = d.deviceIcon || "󰓃";
                         root.deviceName = d.deviceName || "Speaker";
-                        root.currentTrackHash = d.trackHash || "";
 
-                        if (d.isPlaceholder === false) {
-                            root.artUrl = d.artUrl || "";
+                        if (d.isPlaceholder === false && d.artUrl) {
+                            root.artUrl = d.artUrl;
                             root.blur = d.blur || "";
                             root.grad = d.grad || "";
                             root.textColor = d.textColor || "#cdd6f4";
-                            root.lastSuccessfulHash = d.trackHash || "";
-                            root.lastFetchedUrl = root.currentArtUrl;
-                            root.artFetchStalled = false;
                         } else {
-                            if (root.artUrl === "" || !root.currentArtUrl) {
-                                root.artUrl = d.artUrl || "";
-                                root.blur = d.blur || "";
-                                root.grad = d.grad || "";
-                                root.textColor = d.textColor || "#cdd6f4";
-                            }
+                            root.artUrl = "";
+                            root.blur = "";
+                            root.grad = d.grad || "";
+                            root.textColor = d.textColor || "#cdd6f4";
                         }
                     } catch(e) {}
                 }
@@ -163,22 +138,14 @@ Singleton {
         }
     }
 
-    Timer {
-        id: retryTimer
-        interval: root.artRetryCount < 10 ? 600 : 2500
-        repeat: true
-        running: root.hasActivePlayer && root.currentTrackHash !== "" && root.currentTrackHash !== root.lastSuccessfulHash && root.artRetryCount < 30
-        onTriggered: {
-            root.artRetryCount += 1;
-            if (root.artRetryCount >= 30) {
-                root.artFetchStalled = true;
-            } else {
-                root.fetchArt();
-            }
-        }
-    }
-
     function fetchArt() {
+        if (!root.hasActivePlayer) {
+            root.artUrl = "";
+            root.blur = "";
+            root.grad = "";
+            root.textColor = "#cdd6f4";
+            return;
+        }
         if (artFetchProc.running) {
             root.fetchPending = true;
             return;
@@ -188,12 +155,6 @@ Singleton {
     }
 
     function forceArtRefresh() {
-        root.artRetryCount = 0;
-        root.lastFetchedUrl = "";
-        root.lastSuccessfulHash = "";
-        root.currentTrackHash = "";
-        root.artFetchStalled = false;
-        fallbackArtTimer.stop();
         root.fetchArt();
     }
 }

@@ -15,15 +15,16 @@ QtObject {
             property var typeData: null
             property var redactor: null
 
-            spacing: Scaler.s(8)
+            spacing: Scaler.s(6)
             Layout.alignment: Qt.AlignVCenter
+            Layout.preferredWidth: Scaler.s(52)
 
             IconButton {
                 size: Scaler.s(48)
                 iconOffsetX: (itemCol.typeData && itemCol.typeData.iconOffsetX !== undefined) ? Scaler.s(itemCol.typeData.iconOffsetX) : 0
                 cornerRadius: ThemeBackend.borderRadius
                 buttonIcon: (itemCol.typeData && itemCol.typeData.icon) ? itemCol.typeData.icon : ""
-                iconFontSize: Scaler.s(24)
+                iconFontSize: Scaler.s(22)
                 accentColor: ThemeBackend.surface0
                 textColor: ThemeBackend.text
                 Layout.alignment: Qt.AlignHCenter
@@ -42,7 +43,11 @@ QtObject {
                 font.bold: true
                 color: ThemeBackend.subtext0
                 Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: Scaler.s(4)
+                Layout.preferredWidth: Scaler.s(52)
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                maximumLineCount: 1
+                Layout.bottomMargin: Scaler.s(2)
             }
         }
     }
@@ -50,8 +55,9 @@ QtObject {
     readonly property var types: ({
         "time": {
             name: I18n.t("widgets.types.clock"),
-            icon: "",
-            defaultWidth: 250,
+            icon: "󰥔",
+	    defaultWidth: 250,
+	    iconOffsetX: -1,
             defaultHeight: 120,
             defaultVariant: "digital",
             variants: {

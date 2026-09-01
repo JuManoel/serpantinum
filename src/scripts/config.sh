@@ -1,49 +1,56 @@
 #!/usr/bin/env bash
 
-CONFIG_DIR="$HOME/.config/serpantinum"
-CONFIG_FILE="$CONFIG_DIR/settings.json"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/caching.sh"
 
-init_serpantinum_config() {
-    local project_root="$1"
-    local wallpaper_dir="$2"
-    local install_state="$3"
-    local is_reinstall="$4"
-    local template_json="$project_root/config/serpantinum/settings.json"
-    local script_path="$project_root/src/scripts/location.sh"
+CONFIG_SETTINGS_JSON="${QS_SETTINGS:-$HOME/.config/serpantinum/settings.json}"
 
-    if [[ "$install_state" == "current" && "$is_reinstall" != "true" ]]; then
-        return 0
+_config_ensure_settings() {
+    local dir
+    dir="$(dirname "$CONFIG_SETTINGS_JSON")"
+    [[ -d "$dir" ]] || mkdir -p "$dir"
+    [[ -s "$CONFIG_SETTINGS_JSON" ]] || echo '{}' > "$CONFIG_SETTINGS_JSON"
+}
+
+get_setting() {
+    local key="$1"
+    local fallback="${2:-}"
+    _config_ensure_settings
+    local val
+    val="$(jq -r --arg k "$key" 'if has($k) then .[$k] else "__MISSING__" end' "$CONFIG_SETTINGS_JSON" 2>/dev/null)"
+    if [[ "$val" == "__MISSING__" || "$val" == "null" ]]; then
+        printf '%s' "$fallback"
+    else
+        printf '%s' "$val"
+    fi
+}
+
+set_setting() {
+    local key="$1"
+    local value="$2"
+    _config_ensure_settings
+
+    local json_value
+    if echo "$value" | jq -e . > /dev/null 2>&1; then
+        json_value="$value"
+    else
+        json_value="$(jq -Rn --arg v "$value" '$v')"
     fi
 
-    mkdir -p "$CONFIG_DIR"
-
-    if [ -f "$template_json" ]; then
-        if [ -f "$CONFIG_FILE" ] && [ -s "$CONFIG_FILE" ]; then
-            local merged_json
-            merged_json=$(jq -s --arg wp "$wallpaper_dir" '
-                .[0] * .[1]
-            ' "$template_json" "$CONFIG_FILE" 2>/dev/null)
-            if [ -n "$merged_json" ]; then
-                echo "$merged_json" > "$CONFIG_FILE"
-            fi
-        else
-            local initial_json
-            initial_json=$(jq --arg wp "$wallpaper_dir" '
-                . * (if ($wp | length > 0) then {wallpaperDir: $wp} else {} end)
-            ' "$template_json" 2>/dev/null)
-            if [ -n "$initial_json" ]; then
-                echo "$initial_json" > "$CONFIG_FILE"
-            else
-                cp "$template_json" "$CONFIG_FILE"
-            fi
+    local tmp="${CONFIG_SETTINGS_JSON}.tmp"
+    if jq --arg k "$key" --argjson v "$json_value" '. + {($k): $v}' "$CONFIG_SETTINGS_JSON" > "$tmp" 2>/dev/null; then
+        if jq -e . "$tmp" > /dev/null 2>&1; then
+            mv "$tmp" "$CONFIG_SETTINGS_JSON"
         fi
-    elif [ ! -f "$CONFIG_FILE" ]; then
-        echo "{}" > "$CONFIG_FILE"
     fi
+}
 
-    if [ -f "$script_path" ]; then
-        bash "$script_path" --refresh >/dev/null 2>&1 || true
-    elif [ -f "$HOME/.local/share/serpantinum/src/scripts/location.sh" ]; then
-        bash "$HOME/.local/share/serpantinum/src/scripts/location.sh" --refresh >/dev/null 2>&1 || true
+update_settings_bulk() {
+    local json_obj="$1"
+    _config_ensure_settings
+    local tmp="${CONFIG_SETTINGS_JSON}.tmp"
+    if jq --argjson patch "$json_obj" '. + $patch' "$CONFIG_SETTINGS_JSON" > "$tmp" 2>/dev/null; then
+        if jq -e . "$tmp" > /dev/null 2>&1; then
+            mv "$tmp" "$CONFIG_SETTINGS_JSON"
+        fi
     fi
 }

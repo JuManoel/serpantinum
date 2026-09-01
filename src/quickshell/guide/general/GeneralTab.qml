@@ -69,8 +69,8 @@ Item {
         return path;
     }
 
-    property var languageCodes: ["en", "ru", "de", "es", "it", "hy"]
-    property var languageNames: ["English", "Русский", "Deutsch", "Español", "Italiano", "Հայերեն"]
+    property var languageCodes: ["en", "ru", "de", "es", "it", "hy", "vi"]
+    property var languageNames: ["English", "Русский", "Deutsch", "Español", "Italiano", "Հայերեն", "Tiếng Việt"]
 
     property var weatherUnitCodes: ["metric", "imperial", "standard"]
     property var weatherUnitNames: ["Celsius", "Fahrenheit", "Kelvin"]
@@ -105,7 +105,8 @@ Item {
     }
 
     function updateGeneralSettings() {
-        let current = Config.getSetting("general", generalTabRoot.defaultGeneralSettings);
+        if (typeof Config !== "undefined" && !Config.dataReady) return;
+        let current = Object.assign({}, Config.getSetting("general", generalTabRoot.defaultGeneralSettings));
         current.language = generalTabRoot.currentLanguage;
         current.avatarPath = generalTabRoot.currentAvatarSourcePath;
         current.muteSfx = generalTabRoot.muteSfx;
