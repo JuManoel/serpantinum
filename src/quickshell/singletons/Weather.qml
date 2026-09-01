@@ -87,6 +87,7 @@ Item {
                     root.unit = gs.weatherUnit;
                 }
             }
+            root.refresh(false);
         }
     }
 
@@ -215,12 +216,15 @@ Item {
         interval: root.refreshInterval
         running: true
         repeat: true
-        triggeredOnStart: true
+        triggeredOnStart: false
         onTriggered: root.refresh(false)
     }
 
     Component.onCompleted: {
         root._lastLocationFingerprint = JSON.stringify(root.activeLocation || {});
         root._lastUnit = root.unit;
+        if (typeof Config !== "undefined" && Config.dataReady) {
+            root.refresh(false);
+        }
     }
 }

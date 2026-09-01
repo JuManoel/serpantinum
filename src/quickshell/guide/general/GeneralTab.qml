@@ -105,7 +105,8 @@ Item {
     }
 
     function updateGeneralSettings() {
-        let current = Config.getSetting("general", generalTabRoot.defaultGeneralSettings);
+        if (typeof Config !== "undefined" && !Config.dataReady) return;
+        let current = Object.assign({}, Config.getSetting("general", generalTabRoot.defaultGeneralSettings));
         current.language = generalTabRoot.currentLanguage;
         current.avatarPath = generalTabRoot.currentAvatarSourcePath;
         current.muteSfx = generalTabRoot.muteSfx;
