@@ -209,7 +209,7 @@ if ! $CACHE_VALID; then
             if [[ "$isPlaceholderStr" == "313244" ]]; then
                 cp "$tempArt" "$tempBlur"
             else
-                convert "$tempArt" -blur 0x20 -brightness-contrast -30x-10 "$tempBlur" 2>/dev/null
+                convert "$tempArt" -blur 0x18 "$tempBlur" 2>/dev/null
                 colors=$(convert "$tempArt" -resize 50x50 -alpha off +dither -quantize RGB -colors 3 -depth 8 -format "%c" histogram:info: 2>/dev/null | grep -E -o '#[0-9A-Fa-f]{6}' | head -n 3 | tr '\n' ' ')
                 read -r -a color_array <<< "$colors"
 

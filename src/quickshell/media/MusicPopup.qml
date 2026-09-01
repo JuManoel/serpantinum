@@ -616,6 +616,17 @@ Item {
                         Behavior on opacity { NumberAnimation { duration: 800; easing.type: Easing.InOutQuad } }
                     }
 
+                    Rectangle {
+                        anchors.fill: parent
+                        opacity: (root.hasTargetPlayer && root.activeBlur) ? 1.0 : 0.0
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Qt.alpha(ThemeBackend.base, 0.55); Behavior on color { ColorAnimation { duration: 600 } } }
+                            GradientStop { position: 0.5; color: Qt.alpha(ThemeBackend.base, 0.72); Behavior on color { ColorAnimation { duration: 600 } } }
+                            GradientStop { position: 1.0; color: Qt.alpha(ThemeBackend.base, 0.90); Behavior on color { ColorAnimation { duration: 600 } } }
+                        }
+                        Behavior on opacity { NumberAnimation { duration: 800; easing.type: Easing.InOutQuad } }
+                    }
+
                     onBlurUrlChanged: {
                         if (!blurUrl) {
                             blurA.source = "";
