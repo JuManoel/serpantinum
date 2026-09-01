@@ -267,17 +267,19 @@ deploy_package() {
             find "$TARGET_BASE/src/scripts" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
         fi
 
-        for cfg in "${EXTRA_CONFIGS[@]}"; do
-            local src_cfg="$REPO_ROOT/config/$cfg"
-            local dest_cfg="$HOME/.config/$cfg"
-            if [ -d "$src_cfg" ]; then
-                mkdir -p "$dest_cfg"
-                cp -r "$src_cfg/." "$dest_cfg/"
-            elif [ -f "$src_cfg" ]; then
-                mkdir -p "$(dirname "$dest_cfg")"
-                cp "$src_cfg" "$dest_cfg"
-            fi
-        done
+        if [ "$is_update" != "true" ]; then
+            for cfg in "${EXTRA_CONFIGS[@]}"; do
+                local src_cfg="$REPO_ROOT/config/$cfg"
+                local dest_cfg="$HOME/.config/$cfg"
+                if [ -d "$src_cfg" ]; then
+                    mkdir -p "$dest_cfg"
+                    cp -r "$src_cfg/." "$dest_cfg/"
+                elif [ -f "$src_cfg" ]; then
+                    mkdir -p "$(dirname "$dest_cfg")"
+                    cp "$src_cfg" "$dest_cfg"
+                fi
+            done
+        fi
 
         if [ "$is_update" != "true" ]; then
             for comp in "${COMPOSITORS[@]}"; do
@@ -339,13 +341,15 @@ deploy_package() {
                 elif [[ "$file" == src/* ]]; then
                     rm -f "$TARGET_BASE/$file"
                 elif [[ "$file" == config/* ]]; then
-                    local rel_cfg="${file#config/}"
-                    local cfg_name="${rel_cfg%%/*}"
-                    for cfg in "${EXTRA_CONFIGS[@]}"; do
-                        if [[ "$cfg" == "$cfg_name" ]]; then
-                            rm -f "$HOME/.config/$rel_cfg"
-                        fi
-                    done
+                    if [ "$is_update" != "true" ]; then
+                        local rel_cfg="${file#config/}"
+                        local cfg_name="${rel_cfg%%/*}"
+                        for cfg in "${EXTRA_CONFIGS[@]}"; do
+                            if [[ "$cfg" == "$cfg_name" ]]; then
+                                rm -f "$HOME/.config/$rel_cfg"
+                            fi
+                        done
+                    fi
                 elif [[ "$file" == compositors/* || "$file" == compositor/* ]]; then
                     if [ "$is_update" != "true" ]; then
                         local comp_part="${file#compositor*/}"
@@ -382,14 +386,16 @@ deploy_package() {
                         chmod +x "$TARGET_BASE/$file" 2>/dev/null || true
                     fi
                 elif [[ "$file" == config/* ]]; then
-                    local rel_cfg="${file#config/}"
-                    local cfg_name="${rel_cfg%%/*}"
-                    for cfg in "${EXTRA_CONFIGS[@]}"; do
-                        if [[ "$cfg" == "$cfg_name" ]]; then
-                            mkdir -p "$(dirname "$HOME/.config/$rel_cfg")"
-                            cp "$REPO_ROOT/$file" "$HOME/.config/$rel_cfg"
-                        fi
-                    done
+                    if [ "$is_update" != "true" ]; then
+                        local rel_cfg="${file#config/}"
+                        local cfg_name="${rel_cfg%%/*}"
+                        for cfg in "${EXTRA_CONFIGS[@]}"; do
+                            if [[ "$cfg" == "$cfg_name" ]]; then
+                                mkdir -p "$(dirname "$HOME/.config/$rel_cfg")"
+                                cp "$REPO_ROOT/$file" "$HOME/.config/$rel_cfg"
+                            fi
+                        done
+                    fi
                 elif [[ "$file" == compositors/* || "$file" == compositor/* ]]; then
                     if [ "$is_update" != "true" ]; then
                         local comp_part="${file#compositor*/}"
