@@ -52,6 +52,7 @@
 , quickshell
 , libpulseaudio
 , pipewire
+, ...
 }:
 let
   pname = "serpantinum";
