@@ -84,7 +84,7 @@ if [ "$COMMAND" == "stop" ]; then
     else
         pkill -TERM -f "serpantinumd" 2>/dev/null
     fi
-    pkill hyprsunset 2>/dev/null
+    pkill -f "focus_daemon.py" 2>/dev/null
     echo "$(t "daemon.cli.stopped")"
     exit 0
 fi
@@ -134,6 +134,7 @@ if [ "$COMMAND" == "start" ]; then
             terminate_tree "$pid"
         done
 
+        pkill -f "focus_daemon.py" 2>/dev/null
         rm -f "/tmp/serpantinumd.pid"
         rm -f "/tmp/serpantinumd.lock"
         exit 0
