@@ -289,17 +289,19 @@ Item {
         root.beginEditing();
     }
 
-    function deleteActiveNote() {
-        let idx = root.activeIndex();
-        if (idx < 0 || root.notes.length === 0) return;
+    function deleteNoteAtIndex(idx) {
+        if (idx < 0 || idx >= root.notes.length) return;
+        let removedId = root.notes[idx].id;
         root.notes.splice(idx, 1);
         notesModel.remove(idx);
-        if (root.notes.length === 0) {
-            root.activeId = "";
-            root.inNoteView = false;
-            root.isEditing = false;
-        } else {
-            root.activeId = root.notes[Math.min(idx, root.notes.length - 1)].id;
+        if (root.activeId === removedId) {
+            if (root.notes.length === 0) {
+                root.activeId = "";
+                root.inNoteView = false;
+                root.isEditing = false;
+            } else {
+                root.activeId = root.notes[Math.min(idx, root.notes.length - 1)].id;
+            }
         }
         root.persistNotes();
     }
@@ -369,7 +371,7 @@ Item {
                     Layout.preferredWidth: root.s(30)
                     Layout.preferredHeight: root.s(30)
                     enabled: root.activeId !== ""
-                    onTriggered: root.deleteActiveNote()
+                    onTriggered: root.deleteNoteAtIndex(root.activeIndex());
                 }
             }
 
@@ -402,10 +404,34 @@ Item {
                         height: noteDelegateCard.height
 
                         property bool isSelected: model.id === root.activeId
+                        property real dragX: 0
+                        property bool isDismissing: false
 
-                        scale: noteCardMa.pressed ? 0.98 : 1.0
+                        scale: (noteCardMa.pressed && !noteCardMa.draggingH) ? 0.98 : 1.0
                         Behavior on scale {
+                            enabled: !noteCardMa.draggingH
                             NumberAnimation { duration: 250; easing.type: Easing.OutQuint }
+                        }
+
+                        NumberAnimation {
+                            id: noteResetAnim
+                            target: noteDelegateWrapper
+                            property: "dragX"
+                            from: noteDelegateWrapper.dragX
+                            to: 0
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+
+                        NumberAnimation {
+                            id: noteDismissAnim
+                            target: noteDelegateWrapper
+                            property: "dragX"
+                            from: noteDelegateWrapper.dragX
+                            to: 0
+                            duration: 200
+                            easing.type: Easing.OutQuad
+                            onFinished: root.deleteNoteAtIndex(index)
                         }
 
                         Rectangle {
@@ -417,11 +443,15 @@ Item {
                             radius: Math.min(ThemeBackend.borderRadius, root.s(12))
                             color: {
                                 if (noteDelegateWrapper.isSelected) return root.cMauve;
-                                return noteCardMa.containsMouse ? Qt.lighter(root.cSurface1, 1.04) : root.cSurface1;
+                                return noteCardMa.containsMouse && !noteCardMa.draggingH ? Qt.lighter(root.cSurface1, 1.04) : root.cSurface1;
                             }
                             clip: true
 
+                            transform: Translate { x: noteDelegateWrapper.dragX }
+                            opacity: Math.max(0.0, 1.0 - (Math.abs(noteDelegateWrapper.dragX) / (noteDelegateCard.width * 0.75)))
+
                             Behavior on color {
+                                enabled: !noteCardMa.draggingH
                                 ColorAnimation { duration: 180; easing.type: Easing.OutCubic }
                             }
 
@@ -494,10 +524,68 @@ Item {
                                 id: noteCardMa
                                 anchors.fill: parent
                                 hoverEnabled: true
+                                enabled: !noteDelegateWrapper.isDismissing
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.activeId = model.id;
-                                    root.selectNote(model.id);
+
+                                property real startRootX: 0
+                                property real startRootY: 0
+                                property bool draggingH: false
+
+                                onPressed: (mouse) => {
+                                    let pt = mapToItem(notesList, mouse.x, mouse.y);
+                                    startRootX = pt.x;
+                                    startRootY = pt.y;
+                                    draggingH = false;
+                                    noteResetAnim.stop();
+                                }
+
+                                onPositionChanged: (mouse) => {
+                                    if (!pressed) return;
+                                    let pt = mapToItem(notesList, mouse.x, mouse.y);
+                                    let dx = pt.x - startRootX;
+                                    let dy = pt.y - startRootY;
+
+                                    if (!draggingH) {
+                                        if (Math.abs(dx) > root.s(6) && Math.abs(dx) > Math.abs(dy)) {
+                                            draggingH = true;
+                                            noteCardMa.preventStealing = true;
+                                        }
+                                    }
+
+                                    if (draggingH) {
+                                        noteDelegateWrapper.dragX = dx;
+                                    }
+                                }
+
+                                onReleased: (mouse) => {
+                                    noteCardMa.preventStealing = false;
+                                    if (draggingH) {
+                                        let threshold = noteDelegateCard.width * 0.18;
+                                        if (Math.abs(noteDelegateWrapper.dragX) > threshold) {
+                                            noteDelegateWrapper.isDismissing = true;
+                                            noteDismissAnim.from = noteDelegateWrapper.dragX;
+                                            noteDismissAnim.to = noteDelegateWrapper.dragX > 0
+                                                ? noteDelegateCard.width * 1.2
+                                                : -noteDelegateCard.width * 1.2;
+                                            noteDismissAnim.start();
+                                        } else {
+                                            noteResetAnim.from = noteDelegateWrapper.dragX;
+                                            noteResetAnim.start();
+                                        }
+                                        draggingH = false;
+                                    } else {
+                                        root.activeId = model.id;
+                                        root.selectNote(model.id);
+                                    }
+                                }
+
+                                onCanceled: {
+                                    noteCardMa.preventStealing = false;
+                                    if (draggingH) {
+                                        noteResetAnim.from = noteDelegateWrapper.dragX;
+                                        noteResetAnim.start();
+                                        draggingH = false;
+                                    }
                                 }
                             }
                         }
