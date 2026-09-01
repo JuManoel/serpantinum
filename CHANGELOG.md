@@ -1,3 +1,18 @@
+### 2.0.4
+
+- replace hardcoded delete buttons with a reusable
+- Fix the calendar popup nodes having wrong scaling behavior breaking the 3d illusion
+- feat: add a new reusable icon button instance for "delete button" implementation
+- fix: prevent color theme reloads when the theme didn't actually change
+- feat: add sub-nested tabs in the displaytab and split the widgets tab in the displaytab
+- feat: make the launcher change its size based on the amount of elements and move the input to the bottom when attached to the bottom side of the screen
+- feat: make the clipboard change its size based on the amount of elements and move the input to the bottom when attached to the bottom side of the screen
+- docs: add a PR template
+- Italian Translation fixes (#186)
+- feat: make the Sddm theme have a better typing animation
+- fix: remove sddm on-screen keyboard for some users
+- fix: make config.sh not merge it on update
+
 ### 2.0.3
 
 - fix: system options in the systempanel not being adapted to different init systems and different compositors
