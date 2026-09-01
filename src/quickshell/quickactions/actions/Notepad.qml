@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import "../../singletons"
 import "../../"
+import "../../reusables"
 
 Item {
     id: root
@@ -43,8 +44,6 @@ Item {
     property color cText: ThemeBackend.text
     property color cSubtext0: ThemeBackend.subtext0
     property color cMauve: ThemeBackend.mauve
-    property color cRed: ThemeBackend.red
-    property color cGreen: ThemeBackend.green
 
     function alpha(color, a) { return Qt.rgba(color.r, color.g, color.b, a); }
 
@@ -323,39 +322,6 @@ Item {
 
     Component.onDestruction: persistNotes()
 
-    component ActionBtn: Rectangle {
-        id: actionBtn
-        required property string label
-        property color accent: ThemeBackend.mauve
-        property bool enabled: true
-        signal triggered()
-
-        radius: root.s(8)
-        opacity: enabled ? 1 : 0.4
-        color: !enabled ? root.cSurface0
-            : (ma.pressed ? root.alpha(accent, 0.35) : (ma.containsMouse ? root.alpha(accent, 0.2) : root.cSurface0))
-        border.width: 1
-        border.color: root.alpha(accent, 0.5)
-
-        Text {
-            anchors.centerIn: parent
-            text: actionBtn.label
-            font.family: ThemeBackend.fontFamily
-            font.bold: true
-            font.pixelSize: root.s(actionBtn.label.length > 4 ? 10 : 12)
-            color: accent
-        }
-
-        MouseArea {
-            id: ma
-            anchors.fill: parent
-            hoverEnabled: true
-            enabled: actionBtn.enabled
-            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-            onClicked: actionBtn.triggered()
-        }
-    }
-
     Item {
         id: orientedRoot
         anchors.centerIn: parent
@@ -393,19 +359,14 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
-                ActionBtn {
-                    Layout.preferredWidth: root.s(72)
-                    Layout.preferredHeight: root.s(30)
-                    label: I18n.t("quickactions.notepad.new")
-                    accent: root.cGreen
+                ClickButton {
+                    buttonText: I18n.t("quickactions.notepad.new")
                     onTriggered: root.createNote()
                 }
 
-                ActionBtn {
+                DeleteButton {
                     Layout.preferredWidth: root.s(30)
                     Layout.preferredHeight: root.s(30)
-                    label: "󰧧"
-                    accent: root.cRed
                     enabled: root.activeId !== ""
                     onTriggered: root.deleteActiveNote()
                 }
@@ -523,11 +484,8 @@ Item {
                 Layout.fillWidth: true
                 spacing: root.s(6)
 
-                ActionBtn {
-                    Layout.preferredWidth: root.s(80)
-                    Layout.preferredHeight: root.s(32)
-                    label: I18n.t("quickactions.notepad.back_to_list")
-                    accent: root.cSubtext0
+                ClickButton {
+                    buttonText: I18n.t("quickactions.notepad.back_to_list")
                     onTriggered: root.closeNoteView()
                 }
 
@@ -541,8 +499,6 @@ Item {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter
                 }
-
-                Item { Layout.preferredWidth: root.s(80) }
             }
 
             Rectangle {
