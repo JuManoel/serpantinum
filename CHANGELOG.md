@@ -1,3 +1,10 @@
+### 2.0.5
+
+- fix: crucial bug where people couldn't use the config
+- feat: make the musicpopup match the theme more by making the dim on the art in the background have the base theme color instead of black
+- fix: make external kitty/fatfetch/cava configs not reinstall itself on update, and make location not re-evaluate itself on updates
+- feat(i18n): add Armenian translation (#191)
+
 ### 2.0.4
 
 - replace hardcoded delete buttons with a reusable
