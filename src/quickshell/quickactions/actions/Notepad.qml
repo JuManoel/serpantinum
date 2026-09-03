@@ -489,7 +489,6 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: root.s(8)
-                visible: !root.inNoteView || !root.useSyncedListExpand
 
                 Text {
                     text: I18n.t("quickactions.notepad.title")
@@ -834,9 +833,14 @@ Item {
                 Layout.fillWidth: true
                 spacing: root.s(6)
                 z: 2
+                opacity: root.useSyncedListExpand ? 0 : 1
+                Behavior on opacity {
+                    NumberAnimation { duration: 120 }
+                }
 
                 ClickButton {
                     buttonText: I18n.t("quickactions.notepad.back_to_list")
+                    enabled: !root.useSyncedListExpand
                     onTriggered: root.animateNoteViewClose()
                 }
 
