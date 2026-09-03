@@ -22,22 +22,44 @@ Item {
     property string previewHtml: ""
     property bool useQtFallback: false
 
-    property real itemExpandProgress: isExpanded ? 1.0 : 0.0
+    property real itemExpandProgress: 0
     property real dragX: 0
     property bool isDismissing: false
+    property bool suppressExpandBinding: false
     readonly property bool canExpand: true
+    readonly property bool isOverlayCard: !cardRoot.listView
 
     signal dismissRequested()
+
+    function s(val) { return typeof scaleFunc === "function" ? scaleFunc(val) : val; }
+
+    function syncExpandBinding() {
+        cardRoot.itemExpandProgress = Qt.binding(() => cardRoot.isExpanded ? 1.0 : 0.0);
+    }
+
+    function breakExpandBinding() {
+        cardRoot.itemExpandProgress = cardRoot.itemExpandProgress;
+    }
 
     function resetDragState() {
         cardRoot.dragX = 0;
         cardRoot.isDismissing = false;
-        cardRoot.itemExpandProgress = cardRoot.isExpanded ? 1.0 : 0.0;
+        cardRoot.suppressExpandBinding = false;
+        cardRoot.syncExpandBinding();
     }
 
-    onNoteIdChanged: resetDragState()
-
-    function s(val) { return typeof scaleFunc === "function" ? scaleFunc(val) : val; }
+    onNoteIdChanged: {
+        cardRoot.dragX = 0;
+        cardRoot.isDismissing = false;
+        if (cardRoot.isOverlayCard) {
+            cardRoot.applyPreviewCache();
+            NotesManager.scheduleRender(noteId);
+            if (cardRoot.isExpanded)
+                cardRoot.syncExpandBinding();
+        } else {
+            cardRoot.resetDragState();
+        }
+    }
 
     readonly property color cSurface1: ThemeBackend.surface1
     readonly property color cText: ThemeBackend.text
@@ -45,12 +67,15 @@ Item {
     readonly property color cCrust: ThemeBackend.crust
     readonly property color cBase: ThemeBackend.base
     readonly property color cMauve: ThemeBackend.mauve
-    readonly property bool showExpandedBody: cardRoot.isExpanded && cardRoot.itemExpandProgress > 0.02
+    readonly property bool showExpandedBody: cardRoot.displayProgress > 0.02
+    readonly property real displayProgress: (cardRoot.isOverlayCard && cardRoot.isExpanded)
+        ? 1.0 : cardRoot.itemExpandProgress
 
     function alpha(color, a) { return Qt.rgba(color.r, color.g, color.b, a); }
 
     width: listView ? listView.width : parent.width
-    height: cardRoot.isDismissing ? 0 : noteCard.height
+    height: cardRoot.isDismissing ? 0
+        : (cardRoot.isOverlayCard && parent ? parent.height : noteCard.height)
     z: isSelected ? 2 : 1
 
     scale: (cardMa.pressed && !cardMa.draggingH && !cardMa.draggingV) ? 0.98 : 1.0
@@ -60,7 +85,7 @@ Item {
     }
 
     Behavior on itemExpandProgress {
-        enabled: !cardMa.draggingV
+        enabled: !cardMa.draggingV && !entryExpandAnim.running && !collapseCloseAnim.running
         NumberAnimation {
             duration: 300
             easing.type: Easing.OutQuart
@@ -71,9 +96,14 @@ Item {
         }
     }
 
+    Component.onCompleted: {
+        if (cardRoot.isOverlayCard)
+            cardRoot.itemExpandProgress = 0;
+        else
+            cardRoot.syncExpandBinding();
+    }
+
     onIsExpandedChanged: {
-        if (!cardMa.draggingV)
-            cardRoot.itemExpandProgress = Qt.binding(() => cardRoot.isExpanded ? 1.0 : 0.0);
         if (isExpanded) {
             applyPreviewCache();
             NotesManager.scheduleRender(noteId);
@@ -81,38 +111,89 @@ Item {
                 NotesManager.pendingEditId = "";
                 Qt.callLater(beginEditing);
             }
-            if (listView)
+            if (listView) {
+                if (!cardMa.draggingV && !cardRoot.suppressExpandBinding)
+                    cardRoot.syncExpandBinding();
                 listView.positionViewAtIndex(index, ListView.Beginning);
-        } else if (isEditing) {
-            finishEditing();
+            } else if (cardRoot.visible) {
+                cardRoot.playExpandEntry(0);
+            } else {
+                cardRoot.itemExpandProgress = 0;
+            }
+        } else {
+            if (!cardMa.draggingV && !cardRoot.suppressExpandBinding)
+                cardRoot.syncExpandBinding();
+            if (isEditing)
+                finishEditing();
         }
     }
 
     onVisibleChanged: {
-        if (visible && isExpanded) {
+        if (visible && isExpanded && cardRoot.isOverlayCard) {
             applyPreviewCache();
             NotesManager.scheduleRender(noteId);
+            cardRoot.suppressExpandBinding = false;
+            cardRoot.syncExpandBinding();
         }
     }
 
     Connections {
         target: NotesManager
+        function onExpandedIdChanged() {
+            if (NotesManager.expandedId === "" && cardRoot.listView)
+                cardRoot.resetDragState();
+        }
         function onRenderFinished(nid, html, fallback) {
             if (nid !== cardRoot.noteId) return;
+            if (!html || html.trim() === "") {
+                cardRoot.applyPreviewCache();
+                return;
+            }
             cardRoot.previewHtml = html;
             cardRoot.useQtFallback = fallback;
         }
     }
 
-    function applyPreviewCache() {
-        let cached = NotesManager.getPreview(noteId);
-        if (cached) {
-            previewHtml = cached.html;
-            useQtFallback = cached.useFallback;
+    function playExpandEntry(fromProgress) {
+        if (entryExpandAnim.running) entryExpandAnim.stop();
+        cardRoot.suppressExpandBinding = true;
+        cardRoot.itemExpandProgress = fromProgress;
+        entryExpandAnim.from = fromProgress;
+        entryExpandAnim.to = 1.0;
+        entryExpandAnim.start();
+    }
+
+    onItemExpandProgressChanged: {
+        if (cardRoot.itemExpandProgress > 0.15 && !cardRoot.isEditing) {
+            cardRoot.applyPreviewCache();
+            NotesManager.scheduleRender(noteId, true);
         }
     }
 
+    function applyPreviewCache() {
+        let cached = NotesManager.getPreview(noteId);
+        if (cached && cached.html !== undefined && cached.html !== "") {
+            previewHtml = cached.html;
+            useQtFallback = cached.useFallback;
+        } else {
+            useQtFallback = true;
+            previewHtml = noteContent || "";
+        }
+    }
+
+    onNoteContentChanged: {
+        if (cardRoot.useQtFallback || !cardRoot.previewHtml)
+            cardRoot.applyPreviewCache();
+    }
+
     function toggleExpand() {
+        if (cardRoot.isOverlayCard && cardRoot.isExpanded) {
+            cardRoot.suppressExpandBinding = true;
+            collapseCloseAnim.from = cardRoot.itemExpandProgress;
+            collapseCloseAnim.to = 0;
+            collapseCloseAnim.start();
+            return;
+        }
         NotesManager.toggleExpanded(noteId);
     }
 
@@ -136,6 +217,32 @@ Item {
     }
 
     property bool suppressEditorSave: false
+
+    NumberAnimation {
+        id: entryExpandAnim
+        target: cardRoot
+        property: "itemExpandProgress"
+        duration: 280
+        easing.type: Easing.OutQuart
+        onFinished: {
+            cardRoot.suppressExpandBinding = false;
+            if (cardRoot.isExpanded)
+                cardRoot.syncExpandBinding();
+        }
+    }
+
+    NumberAnimation {
+        id: collapseCloseAnim
+        target: cardRoot
+        property: "itemExpandProgress"
+        duration: 220
+        easing.type: Easing.OutCubic
+        onFinished: {
+            cardRoot.suppressExpandBinding = false;
+            NotesManager.setExpandedId("");
+            cardRoot.syncExpandBinding();
+        }
+    }
 
     NumberAnimation {
         id: resetAnim
@@ -176,14 +283,14 @@ Item {
 
         readonly property real baseH: cardRoot.s(52)
         readonly property real expandedH: {
-            if (cardRoot.isExpanded) {
-                if (cardRoot.listView)
-                    return Math.max(cardRoot.s(160), cardRoot.listView.height);
-                return Math.max(cardRoot.s(160), cardRoot.availableExpandHeight);
-            }
-            return cardRoot.s(52);
+            if (cardRoot.listView)
+                return Math.max(cardRoot.s(160), cardRoot.listView.height);
+            let hostH = cardRoot.parent ? cardRoot.parent.height : cardRoot.availableExpandHeight;
+            return Math.max(cardRoot.s(160), cardRoot.availableExpandHeight, hostH);
         }
-        height: baseH + (expandedH - baseH) * cardRoot.itemExpandProgress
+        height: (cardRoot.isOverlayCard && cardRoot.isExpanded)
+            ? expandedH
+            : baseH + (expandedH - baseH) * cardRoot.itemExpandProgress
 
         transform: Translate { x: cardRoot.dragX }
         opacity: Math.max(0.0, 1.0 - (Math.abs(cardRoot.dragX) / (noteCard.width * 0.75)))
@@ -213,12 +320,14 @@ Item {
 
             onPressed: (mouse) => {
                 NotesManager.setActiveId(cardRoot.noteId);
+                cardRoot.breakExpandBinding();
                 let pt = mapToItem(cardRoot.listView || cardRoot, mouse.x, mouse.y);
                 startRootX = pt.x;
                 startRootY = pt.y;
                 draggingH = false;
                 draggingV = false;
                 resetAnim.stop();
+                collapseCloseAnim.stop();
             }
 
             onPositionChanged: (mouse) => {
@@ -265,10 +374,19 @@ Item {
                 } else if (draggingV && cardRoot.canExpand) {
                     if (!cardRoot.isExpanded && cardRoot.itemExpandProgress > 0.35) {
                         NotesManager.setExpandedId(cardRoot.noteId);
+                        cardRoot.resetDragState();
                     } else if (cardRoot.isExpanded && cardRoot.itemExpandProgress < 0.65) {
-                        NotesManager.setExpandedId("");
+                        if (cardRoot.isOverlayCard) {
+                            cardRoot.suppressExpandBinding = true;
+                            collapseCloseAnim.from = cardRoot.itemExpandProgress;
+                            collapseCloseAnim.to = 0;
+                            collapseCloseAnim.start();
+                        } else {
+                            cardRoot.syncExpandBinding();
+                        }
+                    } else {
+                        cardRoot.syncExpandBinding();
                     }
-                    cardRoot.itemExpandProgress = Qt.binding(() => cardRoot.isExpanded ? 1.0 : 0.0);
                     draggingV = false;
                 } else {
                     let ptE = mapToItem(expandIcon, mouse.x, mouse.y);
@@ -291,7 +409,7 @@ Item {
                     draggingH = false;
                 }
                 if (draggingV && cardRoot.canExpand) {
-                    cardRoot.itemExpandProgress = Qt.binding(() => cardRoot.isExpanded ? 1.0 : 0.0);
+                    cardRoot.syncExpandBinding();
                     draggingV = false;
                 }
             }
@@ -307,8 +425,8 @@ Item {
             anchors.topMargin: cardRoot.s(8)
             anchors.bottomMargin: cardRoot.s(8)
             spacing: cardRoot.s(2)
-            visible: !cardRoot.isExpanded && cardRoot.itemExpandProgress < 0.01
-            height: visible ? implicitHeight : 0
+            visible: cardRoot.displayProgress < 0.99
+            opacity: Math.max(0.0, 1.0 - cardRoot.displayProgress * 2.5)
 
             Text {
                 Layout.fillWidth: true
@@ -366,7 +484,7 @@ Item {
                     : (isHoveredOrHighlighted ? ThemeBackend.text : ThemeBackend.subtext1))
             autoToggle: false
             visible: cardRoot.canExpand
-            flipped: cardRoot.itemExpandProgress > 0.5
+            flipped: cardRoot.displayProgress > 0.5
             onClicked: {
                 NotesManager.setActiveId(cardRoot.noteId);
                 cardRoot.toggleExpand();
@@ -376,7 +494,10 @@ Item {
         Item {
             id: expandedArea
             z: 3
-            visible: cardRoot.showExpandedBody
+            visible: cardRoot.displayProgress > 0.001
+            opacity: cardRoot.isOverlayCard && cardRoot.isExpanded
+                ? 1.0
+                : Math.max(0.0, (cardRoot.displayProgress - 0.15) / 0.85)
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
@@ -397,14 +518,14 @@ Item {
 
                 Text {
                     Layout.fillWidth: true
-                    visible: cardRoot.itemExpandProgress > 0.35
+                    visible: cardRoot.displayProgress > 0.2
                     text: NotesManager.noteTitle({ content: cardRoot.noteContent, title: "" })
                     font.family: ThemeBackend.fontFamily
                     font.bold: true
                     font.pixelSize: cardRoot.s(13)
                     color: cardRoot.cText
                     elide: Text.ElideRight
-                    opacity: Math.min(1.0, (cardRoot.itemExpandProgress - 0.35) / 0.35)
+                    opacity: Math.min(1.0, (cardRoot.displayProgress - 0.2) / 0.35)
                 }
 
                 Item {
@@ -433,7 +554,9 @@ Item {
                                 selectByMouse: false
                                 focus: false
                                 textFormat: cardRoot.useQtFallback ? TextEdit.MarkdownText : TextEdit.RichText
-                                text: cardRoot.useQtFallback ? (cardRoot.noteContent || "") : cardRoot.previewHtml
+                                text: cardRoot.useQtFallback
+                                    ? (cardRoot.noteContent || "")
+                                    : (cardRoot.previewHtml || cardRoot.noteContent || "")
                                 color: cardRoot.cText
                                 font.family: ThemeBackend.fontFamily
                                 font.pixelSize: cardRoot.s(13)
